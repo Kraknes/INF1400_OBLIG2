@@ -22,7 +22,7 @@ clock = pygame.time.Clock()
 pygame.display.set_caption("Erling Boid")
 
 BOID_SIZE = 5
-HOIK_SIZE = 3
+HOIK_SIZE = 7
 
 NR_OBJECTS = 3
 NR_BOIDS = 50
@@ -38,11 +38,11 @@ COHESION_DIST = 60
 class Draw_Object(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
-        self.image = pygame.Surface([self.size_x, self.size_y])
+        self.image = pygame.Surface([self.size, self.size])
         self.image.fill(self.colour)
         self.rect = self.image.get_rect()
-        self.rect.x = random.uniform(0, SCREEN_X-self.size_x)
-        self.rect.y = random.uniform(0, SCREEN_Y-self.size_y)
+        self.rect.x = random.uniform(0, SCREEN_X-self.size)
+        self.rect.y = random.uniform(0, SCREEN_Y-self.size)
         self.turn_rate = 0.35
         self.max_speed = 4
         self.min_speed = 3
@@ -59,8 +59,7 @@ class Draw_Object(pygame.sprite.Sprite):
 # For obstacle objekter
 class Obstacle_Object(Draw_Object):
     def __init__(self):
-        self.size_x = random.uniform(0, 200)
-        self.size_y = random.uniform(0, 200)
+        self.size = random.uniform(20, 100)
         self.colour = YELLOW
         super().__init__()
         
@@ -68,9 +67,7 @@ class Obstacle_Object(Draw_Object):
 # For flying_object, har flere parametere og funksjoner       
 class Flying_Object(Draw_Object):
     def __init__(self):
-        self.size_x = BOID_SIZE
-        self.size_y = BOID_SIZE
-        self.colour = BLUE
+
         super().__init__()
         self.group = flying_group
         
@@ -93,21 +90,21 @@ class Flying_Object(Draw_Object):
         obstacle_list = pygame.sprite.spritecollide(self, obstacle_group,False)
         for obstacle in obstacle_list:
             
-            if self.rect.centerx < obstacle.rect.left:
+            if self.rect.centerx <= obstacle.rect.left:
                 self.speed_x *= -1
-                self.rect.centerx = obstacle.rect.left - self.size_x
+                self.rect.centerx = obstacle.rect.left - self.size
                 
-            if self.rect.centerx > obstacle.rect.right:
+            if self.rect.centerx >= obstacle.rect.right:
                 self.speed_x *= -1
-                self.rect.centerx = obstacle.rect.right + self.size_x
+                self.rect.centerx = obstacle.rect.right + self.size
                 
-            if self.rect.centery < obstacle.rect.top:
+            if self.rect.centery <= obstacle.rect.top:
                 self.speed_y *= -1
-                self.rect.centery = obstacle.rect.top - self.size_y
+                self.rect.centery = obstacle.rect.top - self.size
                 
-            if self.rect.centery > obstacle.rect.bottom:
+            if self.rect.centery >= obstacle.rect.bottom:
                 self.speed_y *= -1
-                self.rect.centery = obstacle.rect.bottom + self.size_y
+                self.rect.centery = obstacle.rect.bottom + self.size
                 
     # Avoidance of walls around the screen algorithm            
     def avoid_wall(self):         
@@ -245,17 +242,66 @@ class Flying_Object(Draw_Object):
         self.rect.centerx += self.speed_x
         self.rect.centery += self.speed_y
     
+class Boid(Flying_Object):
+    def __init__(self):
+        self.size = BOID_SIZE
+        self.colour = BLUE
+        super().__init__() 
+    
 
+    
+    def update(self):
+        self.alignment(self.group)
+        self.separation(self.group)
+        self.cohesion(self.group)
+        
+        self.avoid_wall()
+        self.avoid_obstacle(obstacle_group)
+        self.obstacle_clip(obstacle_group)
+        self.wall_clip()
+          
+        self.speed_check()
+        self.rect.centerx += self.speed_x
+        self.rect.centery += self.speed_y
+        
+class Hoik(Flying_Object):
+    def __init__(self):
+        self.size = HOIK_SIZE
+        self.colour = RED                                                                                              
+        super().__init__()
+        
+    def eat(self):
+        if pygame.sprite.spritecollide(self, flying_group, True):
+            self.size += 1
+            self.max_speed -= 0.1
+            self.image = pygame.Surface([self.size, self.size])
+            self.image.fill(RED)
+            
+    def update(self):
+        self.alignment(self.group)
+        self.cohesion(self.group)
+        self.eat()
+        
+        self.avoid_wall()
+        self.avoid_obstacle(obstacle_group)
+        self.obstacle_clip(obstacle_group)
+        self.wall_clip()
+          
+        self.speed_check()
+        self.rect.centerx += self.speed_x
+        self.rect.centery += self.speed_y
+        
                 
 
 obstacle_group = pygame.sprite.Group()
 flying_group = pygame.sprite.Group()
+hoik_group = pygame.sprite.Group()
 for _ in range(NR_OBJECTS):
     obstacle_group.add(Obstacle_Object())
 for _ in range (NR_BOIDS):
-    flying_group.add(Flying_Object())
+    flying_group.add(Boid())
 for _ in range (NR_HOIKS):
-    flying_group.add(Flying_Object())
+    hoik_group.add(Hoik())
     
 while True:
     event = pygame.event.poll()
@@ -270,6 +316,8 @@ while True:
     obstacle_group.draw(screen)
     flying_group.update()
     flying_group.draw(screen)
+    hoik_group.update()
+    hoik_group.draw(screen)
     pygame.display.update()
     pygame.display.flip()
     clock.tick(fps)
