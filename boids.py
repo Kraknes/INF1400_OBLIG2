@@ -282,10 +282,10 @@ class Hoik(Flying_Object):
         self.avoid_wall()
         self.obstacle_clip(obstacle_group)
         self.wall_clip()
+        self.phoenix()
         
         # Speed check and add speed to its position
         self.speed_check()
-        self.phoenix()
         self.rect.centerx += self.speed_x
         self.rect.centery += self.speed_y
         
@@ -319,6 +319,7 @@ while not done:
             done = True
     if event.type == pygame.QUIT:
         done = True
+    # Replenish number of boids 
     if len(boid_group) != NR_BOIDS:
         boid_group.add(Boid())
         
